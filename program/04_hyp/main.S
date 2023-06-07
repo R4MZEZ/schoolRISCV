@@ -2,10 +2,25 @@
 #
 # Stanislav Zhelnio, 2020
 #
+#include "new_instructions.h"
+#include "reg_codes.h"
 
-            .text
+.text
 
-start:      mv a0, zero              # t0 = 0
-counter:    addi a0, a0, 2           # t0 = t0 + 2
-            .word 0x00150514         # t0 = t0 ^ 1
-            beq zero, zero, counter  # if t0 == t1 then counter
+start:      
+    li x10, 1
+    li x11, 4
+    li x12, 3
+    hyp rx10, rx11, rx10
+    bne x10, x12, fail
+
+success:
+    li a0, 0
+    beq zero, zero, end
+
+fail:
+    li a0, 1
+    beq zero, zero, end
+
+end:
+    beq zero, zero, end

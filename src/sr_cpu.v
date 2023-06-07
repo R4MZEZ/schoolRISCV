@@ -100,21 +100,24 @@ module sr_cpu
         .result     ( aluResult    ) 
     );
 
-    assign wd3 = wdSrc ? immU : answResult;
+    
 
     //fuction calculator
     wire        calcBusy;
-    wire [31:0] calcResult;
-    wire [31:0] answResult = resSrc ? aluResult : calcResult;
+    wire [23:0] calcResult;
+    wire [31:0] answResult;
+	assign answResult [23:0]  = resSrc ? aluResult [23:0] : calcResult;
+	assign answResult [31:24] = resSrc ? aluResult [31:24] : 8'b0;
+	assign wd3 = wdSrc ? immU : answResult;
 
-    funcCalculator calc (
-        .a       	( rd1           ),
-        .b       	( srcB          ),
-        .clk       	( clk           ),
-        .rst       	( rst_n         ),
-        .start     	( startCalc     ),
-	    .y       	( calcResult    ),
-        .busy_o     ( calcBusy		),
+    func_calculator calc (
+        .a       	( rd1 		[7:0] 	),
+        .b       	( srcB		[7:0]  	),
+        .clk       	( clk           	),
+        .rst       	( ~rst_n         	),
+        .start     	( startCalc     	),
+	    .y       	( calcResult[23:0]	),
+        .busy_o     ( calcBusy			)
     );
 
     //control
@@ -122,8 +125,10 @@ module sr_cpu
         .cmdOp      ( cmdOp        ),
         .cmdF3      ( cmdF3        ),
         .cmdF7      ( cmdF7        ),
+		.clk		( clk		   ),
         .aluZero    ( aluZero      ),
 		.calcBusy	( calcBusy	   ),
+		.resSrc	    ( resSrc	   ),
 		.startCalc	( startCalc	   ),
 		.stopCount  ( stopCount	   ),
         .pcSrc      ( pcSrc        ),
@@ -186,8 +191,9 @@ module sr_control
 	input			 clk,
     input            aluZero,
 	input			 calcBusy,
-	output			 startCalc,
-	output			 stopCount,
+	output reg		 resSrc,
+	output reg		 startCalc,
+	output reg		 stopCount,
     output           pcSrc, 
     output reg       regWrite, 
     output reg       aluSrc,
@@ -196,6 +202,7 @@ module sr_control
 );
     reg          branch;
     reg          condZero;
+	
     assign pcSrc = branch & (aluZero == condZero);
 
     always @ (*) begin
@@ -204,6 +211,9 @@ module sr_control
         regWrite    = 1'b0;
         aluSrc      = 1'b0;
         wdSrc       = 1'b0;
+		startCalc 	= 1'b0;
+		stopCount	= 1'b0;
+		resSrc		= 1'b1;
         aluControl  = `ALU_ADD;
 
         casez( {cmdF7, cmdF3, cmdOp} )
@@ -212,7 +222,7 @@ module sr_control
             { `RVF7_SRL,  `RVF3_SRL,  `RVOP_SRL  } : begin regWrite = 1'b1; aluControl = `ALU_SRL;  end
             { `RVF7_SLTU, `RVF3_SLTU, `RVOP_SLTU } : begin regWrite = 1'b1; aluControl = `ALU_SLTU; end
             { `RVF7_SUB,  `RVF3_SUB,  `RVOP_SUB  } : begin regWrite = 1'b1; aluControl = `ALU_SUB;  end
-			{ `RVF7_ANY,  `RVF3_HYP,  `RVOP_HYP  } : begin regWrite = 1'b1; stopCount = 1'b1; startCalc = 1'b1; end
+			{ `RVF7_ANY,  `RVF3_HYP,  `RVOP_HYP  } : begin stopCount = 1'b1; startCalc = 1'b1; resSrc = 1'b0; end
 
             { `RVF7_ANY,  `RVF3_ADDI, `RVOP_ADDI } : begin regWrite = 1'b1; aluSrc = 1'b1; aluControl = `ALU_ADD; end
             { `RVF7_ANY,  `RVF3_XORI, `RVOP_XORI } : begin regWrite = 1'b1; aluSrc = 1'b1; aluControl = `ALU_XOR; end
@@ -223,9 +233,9 @@ module sr_control
         endcase
     end
 
-	always @ (posedge clk) begin
-		if (~calcBusy)
-			stopCount = 1'b0;
+	always @ (negedge calcBusy) begin
+		stopCount <= 1'b0;
+		regWrite = 1'b1;
 	end
 endmodule
 
