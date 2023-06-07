@@ -236,6 +236,7 @@ module sr_control
 	always @ (negedge calcBusy) begin
 		stopCount <= 1'b0;
 		regWrite = 1'b1;
+		startCalc 	= 1'b0;
 	end
 endmodule
 
