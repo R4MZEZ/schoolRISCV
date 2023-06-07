@@ -26,6 +26,9 @@ module sr_cpu
     wire        aluSrc;
     wire        wdSrc;
     wire  [2:0] aluControl;
+    wire        stopCount;
+    wire        resSrc;
+    wire        startCalc;
 
     //instruction decode wires
     wire [ 6:0] cmdOp;
@@ -43,7 +46,7 @@ module sr_cpu
     wire [31:0] pcBranch = pc + immB;
     wire [31:0] pcPlus4  = pc + 4;
     wire [31:0] pcNext   = pcSrc ? pcBranch : pcPlus4;
-    sm_register r_pc(clk ,rst_n, pcNext, pc);
+    sm_register_we r_pc(clk ,rst_n, ~stopCount, pcNext, pc);
 
     //program memory access
     assign imAddr = pc >> 2;
@@ -97,7 +100,22 @@ module sr_cpu
         .result     ( aluResult    ) 
     );
 
-    assign wd3 = wdSrc ? immU : aluResult;
+    assign wd3 = wdSrc ? immU : answResult;
+
+    //fuction calculator
+    wire        calcBusy;
+    wire [31:0] calcResult;
+    wire [31:0] answResult = resSrc ? aluResult : calcResult;
+
+    funcCalculator calc (
+        .a       	( rd1           ),
+        .b       	( srcB          ),
+        .clk       	( clk           ),
+        .rst       	( rst_n         ),
+        .start     	( startCalc     ),
+	    .y       	( calcResult    ),
+        .busy_o     ( calcBusy		),
+    );
 
     //control
     sr_control sm_control (
@@ -105,6 +123,9 @@ module sr_cpu
         .cmdF3      ( cmdF3        ),
         .cmdF7      ( cmdF7        ),
         .aluZero    ( aluZero      ),
+		.calcBusy	( calcBusy	   ),
+		.startCalc	( startCalc	   ),
+		.stopCount  ( stopCount	   ),
         .pcSrc      ( pcSrc        ),
         .regWrite   ( regWrite     ),
         .aluSrc     ( aluSrc       ),
@@ -162,7 +183,11 @@ module sr_control
     input     [ 6:0] cmdOp,
     input     [ 2:0] cmdF3,
     input     [ 6:0] cmdF7,
+	input			 clk,
     input            aluZero,
+	input			 calcBusy,
+	output			 startCalc,
+	output			 stopCount,
     output           pcSrc, 
     output reg       regWrite, 
     output reg       aluSrc,
@@ -187,6 +212,7 @@ module sr_control
             { `RVF7_SRL,  `RVF3_SRL,  `RVOP_SRL  } : begin regWrite = 1'b1; aluControl = `ALU_SRL;  end
             { `RVF7_SLTU, `RVF3_SLTU, `RVOP_SLTU } : begin regWrite = 1'b1; aluControl = `ALU_SLTU; end
             { `RVF7_SUB,  `RVF3_SUB,  `RVOP_SUB  } : begin regWrite = 1'b1; aluControl = `ALU_SUB;  end
+			{ `RVF7_ANY,  `RVF3_HYP,  `RVOP_HYP  } : begin regWrite = 1'b1; stopCount = 1'b1; startCalc = 1'b1; end
 
             { `RVF7_ANY,  `RVF3_ADDI, `RVOP_ADDI } : begin regWrite = 1'b1; aluSrc = 1'b1; aluControl = `ALU_ADD; end
             { `RVF7_ANY,  `RVF3_XORI, `RVOP_XORI } : begin regWrite = 1'b1; aluSrc = 1'b1; aluControl = `ALU_XOR; end
@@ -196,6 +222,11 @@ module sr_control
             { `RVF7_ANY,  `RVF3_BNE,  `RVOP_BNE  } : begin branch = 1'b1; aluControl = `ALU_SUB; end
         endcase
     end
+
+	always @ (posedge clk) begin
+		if (~calcBusy)
+			stopCount = 1'b0;
+	end
 endmodule
 
 module sr_alu

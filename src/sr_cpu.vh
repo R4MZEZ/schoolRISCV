@@ -27,6 +27,8 @@
 `define RVOP_SLTU   7'b0110011
 `define RVOP_SUB    7'b0110011
 `define RVOP_XORI   7'b0010100
+`define RVOP_HYP    7'b1101011
+
 
 // instruction funct3
 `define RVF3_ADDI   3'b000
@@ -38,6 +40,7 @@
 `define RVF3_SLTU   3'b011
 `define RVF3_SUB    3'b000
 `define RVF3_XORI   3'b000
+`define RVF3_HYP    3'b110
 `define RVF3_ANY    3'b???
 
 // instruction funct7
