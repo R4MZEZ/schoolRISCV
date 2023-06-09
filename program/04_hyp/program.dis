@@ -5,21 +5,8 @@ program.elf:     file format elf32-littleriscv
 Disassembly of section .text:
 
 00000000 <.text>:
-   0:	06b5656b          	0x6b5656b
-   4:	01c00513          	addi	a0,zero,28
-   8:	03100593          	addi	a1,zero,49
-   c:	00005637          	lui	a2,0x5
-  10:	5c760613          	addi	a2,a2,1479 # 55c7 <end+0x559b>
-  14:	06b5656b          	0x6b5656b
-  18:	00c51663          	bne	a0,a2,24 <fail>
-
-0000001c <success>:
-  1c:	00000513          	addi	a0,zero,0
-  20:	00000663          	beq	zero,zero,2c <end>
-
-00000024 <fail>:
-  24:	00100513          	addi	a0,zero,1
-  28:	00000263          	beq	zero,zero,2c <end>
-
-0000002c <end>:
-  2c:	00000063          	beq	zero,zero,2c <end>
+   0:	00000513          	addi	a0,zero,0
+   4:	00000593          	addi	a1,zero,0
+   8:	00000613          	addi	a2,zero,0
+   c:	06b5656b          	0x6b5656b
+  10:	00000613          	addi	a2,zero,0
